@@ -26,6 +26,7 @@ class ProtocBuilder implements Builder {
   static const defaultUseInstalledProtoc = false;
   static const defaultPrecompileProtocPlugin = true;
   static const defaultUseProtocPluginFromPubspec = true;
+  static const defaultProtocPluginParameters = <String>[];
 
   ProtocBuilder(this.options)
       : protobufVersion = options.config['protobuf_version'] as String? ??
@@ -50,7 +51,11 @@ class ProtocBuilder implements Builder {
                 defaultPrecompileProtocPlugin,
         useProtocPluginFromPubspec =
             options.config['use_protoc_plugin_from_pubspec'] as bool? ??
-                defaultUseProtocPluginFromPubspec;
+                defaultUseProtocPluginFromPubspec,
+        protocPluginParameters =
+            (options.config['protoc_plugin_parameters'] as List?)
+                    ?.cast<String>() ??
+                defaultProtocPluginParameters;
 
   final BuilderOptions options;
 
@@ -63,6 +68,7 @@ class ProtocBuilder implements Builder {
   final bool useInstalledProtoc;
   final bool precompileProtocPlugin;
   final bool useProtocPluginFromPubspec;
+  final List<String> protocPluginParameters;
 
   @override
   Future<void> build(BuildStep buildStep) async {
@@ -80,7 +86,13 @@ class ProtocBuilder implements Builder {
 
     final inputPath = path.normalize(buildStep.inputId.path);
 
-    final pluginParameters = grpcEnabled ? 'grpc:' : '';
+    var pluginParameters = {
+      if (grpcEnabled) 'grpc',
+      ...protocPluginParameters,
+    }.join(',');
+    if (pluginParameters.isNotEmpty) {
+      pluginParameters = '$pluginParameters:';
+    }
 
     // Read the input path to signal to the build graph that if the file changes
     // then it should be rebuilt.
